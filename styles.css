@@ -4,10 +4,6 @@ body,html{
     background-color: black;
 }
 
-#source{
-    display: none;
-}
-
 #canvas{
     position: absolute;
     top: 50%;
