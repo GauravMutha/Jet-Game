@@ -1,6 +1,6 @@
 let canvas =document.getElementById("canvas");
 let ctx=canvas.getContext("2d");
-
+var keystate={};
 const image=new Image();
 image.src='images/space5.jpg';
 const planeImage = new Image();
@@ -25,7 +25,7 @@ const plane={
     y:CANVAS_HEIGHT - spriteHeight,
     dx:0,
     dy:0,                                                                                                               
-    speed:5
+    speed:0.5
 }
 
 function animate(){
@@ -44,27 +44,39 @@ function animate(){
 }
 
 function kd(e){
-    if(e.key=='ArrowRight'){
-        plane.dx+=plane.speed;
-        sprite.frameX=3;
-    }
-    if(e.key=='ArrowLeft'){
-        plane.dx-=plane.speed
-        sprite.frameX=1;
-    }
+    keystate[e.keyCode]=true;
 }
 function ku(e){
-    if(e.key=='ArrowLeft' || e.key=='ArrowRight'){
+        keystate[e.keyCode]=false;
+}
+
+function gameloop(){   
+
+    if (keystate[37]){
+        plane.dx-=plane.speed;
+        sprite.frameX=1;
+        console.log("pressed right");
+    }
+    
+    if (keystate[39]){
+        plane.dx+=plane.speed;
+        sprite.frameX=3;
+        console.log("pressed left");
+    }
+    
+    if(!keystate[37] && !keystate[39]){
         plane.dx=0;
         sprite.frameX=2;
     }
+
+    setTimeout(gameloop,10);
 }
 
 function detectwalls(){
-    if(plane.x<-2)
-        plane.x=-2;
+    if(plane.x<0)
+        plane.x=0;
     if(plane.x+spriteWidth>CANVAS_WIDTH)
-        plane.x=CANVAS_WIDTH-spriteWidth
+        plane.x=CANVAS_WIDTH-spriteWidth;
 }
 
 function newpos(){
@@ -74,7 +86,8 @@ function newpos(){
     detectwalls();
 }
 
-document.addEventListener("keydown" ,kd);
-document.addEventListener("keyup", ku);
+window.addEventListener("keydown" ,kd);
+window.addEventListener("keyup", ku);
 
+gameloop();
 animate();
