@@ -1,10 +1,13 @@
 let canvas =document.getElementById("canvas");
 let ctx=canvas.getContext("2d");
 var keystate={};
+let enemies=[];
 const image=new Image();
-image.src='images/space5.jpg';
 const planeImage = new Image();
-planeImage.src='images/sheet4.png';
+const enemyplane = new Image();
+image.src='images/space.jpg';
+planeImage.src='images/hero_sheet.png';
+enemyplane.src='images/enemy_sheet.png';
 
 const CANVAS_WIDTH=canvas.width=800;
 const CANVAS_HEIGHT=canvas.height=window.innerHeight;
@@ -28,18 +31,66 @@ const plane={
     speed:0.5
 }
 
-function animate(){
+class Enemy {
+    constructor(gamewidth,gameheight){
+        this.gamewidth=gamewidth;
+        this.gameheight=gameheight;
+        this.width=370.34;
+        this.height=396;
+        this.image=enemyplane;
+        this.x=Math.floor(Math.random()*430);
+        this.y=0-this.height/2;
+        this.frameX=1;
+        this.speed=10;
+        this.markedForDeletion=false;
+    }
+
+    update(){
+        this.y+=this.speed;
+        if(this.y>CANVAS_HEIGHT) this.markedForDeletion=true;
+    }
+    draw(context){
+        context.drawImage(this.image,this.frameX*this.width,0,this.width,this.height,this.x,this.y,120,120)
+    }
+}
+
+
+function handleEnemies(deltaTime){
+    
+    if(enemyTimer>enemyInterval+randomInterval){
+        enemies=enemies.filter(element => !element.markedForDeletion)
+        enemies.push(new Enemy(CANVAS_WIDTH,CANVAS_HEIGHT));
+        enemyTimer=0;
+    }else{
+        enemyTimer+=deltaTime;
+    }
+    enemies.forEach(enemy=>{
+        enemy.draw(ctx);
+        enemy.update();
+    })
+}
+
+let lastTime=0;
+let enemyInterval=2000;
+let enemyTimer=0;
+let randomInterval=Math.random()*1000+500;
+
+function animate(timeStamp){
+    let deltaTime=timeStamp-lastTime;
+    lastTime=timeStamp;
 
     ctx.clearRect(0,0,CANVAS_WIDTH,CANVAS_HEIGHT);
     ctx.drawImage(image, 0,y1);
     ctx.drawImage(image, 0,y2);
     ctx.drawImage(planeImage,(sprite.frameX)*spriteWidth,(sprite.frameY)*spriteHeight,spriteWidth,spriteHeight,plane.x,plane.y,spriteWidth,spriteHeight);
+    
+    handleEnemies(deltaTime);
+
     newpos();
     y1+=gamespeed;
     y2+=gamespeed;
     if(y1>722) y1=-722+y2;
     if(y2>722) y2=-722+y1;
-`   `
     requestAnimationFrame(animate);
 }
 
@@ -55,13 +106,11 @@ function gameloop(){
     if (keystate[37]){
         plane.dx-=plane.speed;
         sprite.frameX=1;
-        console.log("pressed right");
     }
     
     if (keystate[39]){
         plane.dx+=plane.speed;
         sprite.frameX=3;
-        console.log("pressed left");
     }
     
     if(!keystate[37] && !keystate[39]){
@@ -90,4 +139,4 @@ window.addEventListener("keydown" ,kd);
 window.addEventListener("keyup", ku);
 
 gameloop();
-animate();
+animate(0);
