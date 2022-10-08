@@ -1,13 +1,14 @@
 let canvas =document.getElementById("canvas");
 let ctx=canvas.getContext("2d");
 var keystate={};
-let enemies=[];
+let lastTime=0;
+
 const image=new Image();
 const planeImage = new Image();
 const enemyplane = new Image();
 image.src='images/space.jpg';
 planeImage.src='images/hero_sheet.png';
-enemyplane.src='images/enemy_sheet.png';
+enemyplane.src='images/enemy_sheet3.png';
 
 const CANVAS_WIDTH=canvas.width=800;
 const CANVAS_HEIGHT=canvas.height=window.innerHeight;
@@ -31,23 +32,56 @@ const plane={
     speed:0.5
 }
 
+class Enemymaker{
+    constructor(ctx,cw,ch){
+        this.ctx=ctx;
+        this.cw=cw;
+        this.ch=ch;
+        this.enemies=[];
+        this.enemyTimer=0;
+        this.enemyInterval=1000;
+    }
+    update(deltaTime){
+        if(this.enemyTimer>this.enemyInterval){
+            this.enemies=this.enemies.filter(element => !element.markedForDeletion);
+            this.#addNewEnemy();
+            this.enemyTimer=0;
+            console.log(this.enemies);
+        }else{
+            this.enemyTimer+=deltaTime;
+        }
+        this.enemies.forEach(element => {
+            element.update();
+        })
+    }
+    draw(){
+        this.enemies.forEach(element => {
+            element.draw(this.ctx);
+        })
+    }
+    #addNewEnemy(){
+        this.enemies.push(new Enemy(this))
+    }
+}
+
 class Enemy {
-    constructor(gamewidth,gameheight){
-        this.gamewidth=gamewidth;
-        this.gameheight=gameheight;
-        this.width=370.34;
-        this.height=396;
+    constructor(em){
+        this.em=em;
+        this.gamewidth=this.em.cw;
+        this.gameheight=this.em.ch;
+        this.width=269;
+        this.height=269;
         this.image=enemyplane;
         this.x=Math.floor(Math.random()*430);
         this.y=0-this.height/2;
-        this.frameX=1;
+        this.frameX=Math.floor(Math.random()*3);
         this.speed=10;
         this.markedForDeletion=false;
     }
 
     update(){
         this.y+=this.speed;
-        if(this.y>CANVAS_HEIGHT) this.markedForDeletion=true;
+        if(this.y>this.gameheight) this.markedForDeletion=true;
     }
     draw(context){
         context.drawImage(this.image,this.frameX*this.width,0,this.width,this.height,this.x,this.y,120,120)
@@ -55,25 +89,8 @@ class Enemy {
 }
 
 
-function handleEnemies(deltaTime){
-    
-    if(enemyTimer>enemyInterval+randomInterval){
-        enemies=enemies.filter(element => !element.markedForDeletion)
-        enemies.push(new Enemy(CANVAS_WIDTH,CANVAS_HEIGHT));
-        enemyTimer=0;
-    }else{
-        enemyTimer+=deltaTime;
-    }
-    enemies.forEach(enemy=>{
-        enemy.draw(ctx);
-        enemy.update();
-    })
-}
 
-let lastTime=0;
-let enemyInterval=2000;
-let enemyTimer=0;
-let randomInterval=Math.random()*1000+500;
+const enemymaker=new Enemymaker(ctx,CANVAS_WIDTH,CANVAS_HEIGHT);
 
 function animate(timeStamp){
     let deltaTime=timeStamp-lastTime;
@@ -84,7 +101,8 @@ function animate(timeStamp){
     ctx.drawImage(image, 0,y2);
     ctx.drawImage(planeImage,(sprite.frameX)*spriteWidth,(sprite.frameY)*spriteHeight,spriteWidth,spriteHeight,plane.x,plane.y,spriteWidth,spriteHeight);
     
-    handleEnemies(deltaTime);
+    enemymaker.update(deltaTime);
+    enemymaker.draw()
 
     newpos();
     y1+=gamespeed;
@@ -140,3 +158,5 @@ window.addEventListener("keyup", ku);
 
 gameloop();
 animate(0);
+
+
