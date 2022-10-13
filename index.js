@@ -1,8 +1,12 @@
 let canvas = document.getElementById("canvas");
+let scoreCanvas=document.getElementById("scoreboard");
 let ctx = canvas.getContext("2d");
+let Scorectx = scoreCanvas.getContext("2d");
+
 var keystate = {};
 let lastTime = 0;
 let gameOver = false;
+let score=0;
 
 const image = new Image();
 const planeImage = new Image();
@@ -13,6 +17,9 @@ ast.src = 'images/astsheet.png';
 
 const CANVAS_WIDTH = canvas.width = 800;
 const CANVAS_HEIGHT = canvas.height = window.innerHeight;
+const scoCanWidth=scoreCanvas.width=250;
+const scoCanHeight=scoreCanvas.height=50;
+
 const spriteWidth = 158;
 const spriteHeight = 98;
 const k=182;
@@ -45,6 +52,7 @@ class Enemymaker {
     }
     update(deltaTime) {
         if (this.enemyTimer > this.enemyInterval) {
+            score++;
             this.enemies = this.enemies.filter(element => !element.markedForDeletion);
             this.#addNewEnemy();
             this.enemyTimer = 0;
@@ -81,10 +89,12 @@ class Enemy {
         this.speed = 10;
         this.markedForDeletion = false;
     }
-
+    
     update() {
         this.y += this.speed;
-        if (this.y > this.gameheight) this.markedForDeletion = true;
+        if (this.y > this.gameheight){
+            this.markedForDeletion = true;
+        }
     }
     draw(context) {
         // ctx.strokeStyle = "yellow";
@@ -100,10 +110,16 @@ class Enemy {
 
 const enemymaker = new Enemymaker(ctx, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+function displayScore(ctx){
+    Scorectx.fillStyle="white";
+    Scorectx.font='40px Helvetica';
+    Scorectx.fillText('Score : ' + score,35,40);
+}
+
 function animate(timeStamp) {
     let deltaTime = timeStamp - lastTime;
     lastTime = timeStamp;
-
+    Scorectx.clearRect(0,0,scoCanWidth,scoCanHeight);
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.drawImage(image, 0, y1);
     ctx.drawImage(image, 0, y2);
@@ -117,12 +133,12 @@ function animate(timeStamp) {
 
     enemymaker.update(deltaTime);
     enemymaker.draw();
-
     newpos(enemymaker.enemies);
     y1 += gamespeed;
     y2 += gamespeed;
     if (y1 > 722) y1 = -722 + y2;
     if (y2 > 722) y2 = -722 + y1;
+    displayScore(Scorectx);
     if (gameOver == false) requestAnimationFrame(animate);
 }
 
