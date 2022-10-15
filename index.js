@@ -2,11 +2,12 @@ let canvas = document.getElementById("canvas");
 let scoreCanvas=document.getElementById("scoreboard");
 let ctx = canvas.getContext("2d");
 let Scorectx = scoreCanvas.getContext("2d");
-
+let best=0;
 var keystate = {};
 let lastTime = 0;
 let gameOver = false;
-let score=0;
+let score=-1;
+const SpeedIncrementFactor=0.0001;
 
 const image = new Image();
 const planeImage = new Image();
@@ -18,7 +19,7 @@ ast.src = 'images/astsheet.png';
 const CANVAS_WIDTH = canvas.width = 800;
 const CANVAS_HEIGHT = canvas.height = window.innerHeight;
 const scoCanWidth=scoreCanvas.width=250;
-const scoCanHeight=scoreCanvas.height=50;
+const scoCanHeight=scoreCanvas.height=100;
 
 const spriteWidth = 158;
 const spriteHeight = 98;
@@ -26,6 +27,7 @@ const k=182;
 const SX=196;
 const SY=412;
 let y1 = 0, y2 = -722, gamespeed = 5;
+
 
 const sprite = {
     frameX: 1,
@@ -86,7 +88,7 @@ class Enemy {
         this.x = Math.floor(Math.random() * 430);
         this.y = 0 - this.dh;
         this.frameX = Math.floor(Math.random() * 3);
-        this.speed = 10;
+        this.speed = gamespeed;
         this.markedForDeletion = false;
     }
     
@@ -97,11 +99,6 @@ class Enemy {
         }
     }
     draw(context) {
-        // ctx.strokeStyle = "yellow";
-        // ctx.beginPath();
-        // ctx.strokeRect(this.x,this.y,this.dw,this.dh)
-        // ctx.arc(this.x + this.dw / 2, this.y + this.dh / 2, this.dw / 2, 0, Math.PI * 2);
-        // ctx.stroke();
         context.drawImage(this.image, this.frameX * this.width, 0, this.width, this.height, this.x, this.y, this.dw, this.dh);
     }
 }
@@ -110,10 +107,15 @@ class Enemy {
 
 const enemymaker = new Enemymaker(ctx, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-function displayScore(ctx){
+function displayScore(Scorectx){
     Scorectx.fillStyle="white";
     Scorectx.font='40px Helvetica';
     Scorectx.fillText('Score : ' + score,35,40);
+    Scorectx.fillText('Best : '+best,35,80);
+}
+
+function speedUp(k){
+    gamespeed+=k;
 }
 
 function animate(timeStamp) {
@@ -123,19 +125,15 @@ function animate(timeStamp) {
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.drawImage(image, 0, y1);
     ctx.drawImage(image, 0, y2);
-    
-    // ctx.beginPath();
-    // ctx.strokeStyle= "yellow";
-    // ctx.arc(plane.x + spriteWidth / 2, plane.y + spriteHeight / 2, spriteHeight / 2 +5, 0, Math.PI * 2);
-    // ctx.strokeRect(plane.x,plane.y,spriteWidth,spriteHeight)
-    // ctx.stroke();
     ctx.drawImage(planeImage, SX+k*sprite.frameX, SY, spriteWidth, spriteHeight, plane.x, plane.y, spriteWidth, spriteHeight);
-
+    
     enemymaker.update(deltaTime);
     enemymaker.draw();
     newpos(enemymaker.enemies);
+    
     y1 += gamespeed;
     y2 += gamespeed;
+    speedUp(SpeedIncrementFactor);
     if (y1 > 722) y1 = -722 + y2;
     if (y2 > 722) y2 = -722 + y1;
     displayScore(Scorectx);
@@ -176,6 +174,12 @@ function detectwalls() {
         plane.x = CANVAS_WIDTH - spriteWidth;
 }
 
+function handleGameOver(){
+    document.getElementById("gameOverScreen").style.display="flex";
+    Scorectx.clearRect(0,0,scoCanWidth,scoCanHeight);
+    best=Math.max(score,best);
+}
+
 function newpos(e_arr) {
     plane.x += plane.dx;
     plane.y += plane.dy;
@@ -186,6 +190,7 @@ function newpos(e_arr) {
 
         if(dis<=(e.dw/2+spriteHeight/2+5)){
             gameOver=true;
+            handleGameOver();
         }
     })
     detectwalls();
@@ -195,6 +200,27 @@ window.addEventListener("keydown", kd);
 window.addEventListener("keyup", ku);
 
 gameloop();
-animate(0);
 
 
+//Start the game
+document.addEventListener("keypress",handleStart,{once:true});
+
+function handleRestart(){
+    document.getElementById("gameOverScreen").style.display="none";
+    keystate = {};
+    lastTime = 0;
+    gameOver = false;
+    score=-1;
+    enemymaker.enemies=[];
+    y1 = 0;
+    y2=-722;
+    gamespeed=5;
+    plane.x= CANVAS_WIDTH / 2 - spriteWidth / 2,
+    plane.y= CANVAS_HEIGHT - spriteHeight-10,
+    animate(0);
+}
+
+function handleStart(){
+    document.getElementById("startScreen").style.display="none";
+    animate(0);
+}
