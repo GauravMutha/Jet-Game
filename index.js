@@ -8,6 +8,7 @@ let lastTime = 0;
 let gameOver = false;
 let score=-1;
 const SpeedIncrementFactor=0.0001;
+var audio=new Audio('sounds/wrong.mp3');
 
 const image = new Image();
 const planeImage = new Image();
@@ -190,7 +191,10 @@ function newpos(e_arr) {
 
         if(dis<=(e.dw/2+spriteHeight/2+5)){
             gameOver=true;
-            handleGameOver();
+            audio.play();
+            setTimeout(() => {
+                handleGameOver();
+            }, 700);
         }
     })
     detectwalls();
