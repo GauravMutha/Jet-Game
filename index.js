@@ -8,7 +8,6 @@ let lastTime = 0;
 let gameOver = false;
 let score=-1;
 const SpeedIncrementFactor=0.0001;
-var audio=new Audio('sounds/wrong.mp3');
 
 const image = new Image();
 const planeImage = new Image();
@@ -22,30 +21,30 @@ const CANVAS_HEIGHT = canvas.height = window.innerHeight;
 const scoCanWidth=scoreCanvas.width=250;
 const scoCanHeight=scoreCanvas.height=100;
 
-const spriteWidth = 158;
-const spriteHeight = 98;
-const k=182;
-const SX=196;
-const SY=412;
-let y1 = 0, y2 = -722, gamespeed = 5;
+class Background{
+    constructor(){
+        this.y1=0;
+        this.y2=-722;
+        this.gamespeed=5;
+    }
 
+    draw(){
+        ctx.drawImage(image, 0, this.y1);
+        ctx.drawImage(image, 0, this.y2);
+    }
 
-const sprite = {
-    frameX: 1,
-    gameFrame: 0,
-    staggerFrame: 10
-}
-
-const plane = {
-    x: CANVAS_WIDTH / 2 - spriteWidth / 2,
-    y: CANVAS_HEIGHT - spriteHeight-10,
-    dx: 0,
-    dy: 0,
-    speed: 0.5
+    update(){
+        this.y1 += this.gamespeed;
+        this.y2 += this.gamespeed;
+        if (this.y1 > 722) this.y1 = -722 + this.y2;
+        if (this.y2 > 722) this.y2 = -722 + this.y1;
+        this.gamespeed+=SpeedIncrementFactor;
+    }
 }
 
 class Enemymaker {
-    constructor(ctx, cw, ch) {
+    constructor(ctx, cw, ch,bg) {
+        this.bg=bg;
         this.ctx = ctx;
         this.cw = cw;
         this.ch = ch;
@@ -86,10 +85,10 @@ class Enemy {
         this.dw = this.width / 3;
         this.dh = this.height / 3;
         this.image = ast;
-        this.x = Math.floor(Math.random() * 430);
+        this.x = Math.floor(Math.random() * 673);
         this.y = 0 - this.dh;
         this.frameX = Math.floor(Math.random() * 3);
-        this.speed = gamespeed;
+        this.speed = em.bg.gamespeed;
         this.markedForDeletion = false;
     }
     
@@ -104,9 +103,58 @@ class Enemy {
     }
 }
 
+class PlaneSprite {
+    constructor(){
+        this.dx= 0; //change in x position of plane by keyboard controls
+        this.dy= 0; //change in y position of plane keyboard controls
+        this.speed= 0.5;
+        this.frameX=1;
+        this.sourceX=196;
+        this.sourceY=412;
+        this.destWidth=158;
+        this.destHeight=98;
+        this.destX=CANVAS_WIDTH / 2 - this.destWidth / 2;
+        this.destY=CANVAS_HEIGHT - this.destHeight-10;
+        this.factor=182;
+    }
+    
+    detectwalls(){
+        if (this.destX < 0)
+            this.destX = 0;
+        if (this.destX + this.destWidth > CANVAS_WIDTH)
+            this.destX = CANVAS_WIDTH - this.destWidth;
+    }
+    update(e_arr){
+        this.destX += this.dx;
+        this.destY += this.dy;
+        e_arr.forEach(e=>{
+            let ypos=(this.destY+this.destHeight/2)-(e.y+e.dh/2);
+            let xpos=(this.destX+this.destWidth/2)-(e.x+e.dw/2);
+            let dis=Math.sqrt(xpos*xpos + ypos*ypos);
+
+            if(dis<=(e.dw/2+this.destHeight/2+5)){
+                gameOver=true;
+                new Audio('sounds/wrong.mp3').play();
+                setTimeout(() => {
+                handleGameOver();
+                }, 700);
+            }
+        })
+        this.detectwalls();
+    }
+    
+
+    draw(context){
+        context.drawImage(planeImage, this.sourceX+this.factor*this.frameX, this.sourceY, this.destWidth, this.destHeight, this.destX, this.destY, this.destWidth, this.destHeight);
+    }
+}
 
 
-const enemymaker = new Enemymaker(ctx, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+const spaceBg=new Background();
+const enemymaker = new Enemymaker(ctx, CANVAS_WIDTH, CANVAS_HEIGHT,spaceBg);
+const heroPlane = new PlaneSprite();
+
 
 function displayScore(Scorectx){
     Scorectx.fillStyle="white";
@@ -115,100 +163,65 @@ function displayScore(Scorectx){
     Scorectx.fillText('Best : '+best,35,80);
 }
 
-function speedUp(k){
-    gamespeed+=k;
-}
-
 function animate(timeStamp) {
     let deltaTime = timeStamp - lastTime;
     lastTime = timeStamp;
+    
     Scorectx.clearRect(0,0,scoCanWidth,scoCanHeight);
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    ctx.drawImage(image, 0, y1);
-    ctx.drawImage(image, 0, y2);
-    ctx.drawImage(planeImage, SX+k*sprite.frameX, SY, spriteWidth, spriteHeight, plane.x, plane.y, spriteWidth, spriteHeight);
     
-    enemymaker.update(deltaTime);
+    spaceBg.draw();
+    spaceBg.update();
+    
+    heroPlane.draw(ctx);
+    heroPlane.update(enemymaker.enemies);
+    
     enemymaker.draw();
-    newpos(enemymaker.enemies);
+    enemymaker.update(deltaTime);
     
-    y1 += gamespeed;
-    y2 += gamespeed;
-    speedUp(SpeedIncrementFactor);
-    if (y1 > 722) y1 = -722 + y2;
-    if (y2 > 722) y2 = -722 + y1;
     displayScore(Scorectx);
-    if (gameOver == false) requestAnimationFrame(animate);
-}
 
-function kd(e) {
-    keystate[e.keyCode] = true;
-}
-function ku(e) {
-    keystate[e.keyCode] = false;
+    if (gameOver == false) requestAnimationFrame(animate);
 }
 
 function gameloop() {
 
-    if (keystate[37]) {
-        plane.dx -= plane.speed;
-        sprite.frameX = 0;
+    if (keystate['ArrowLeft']) {
+        heroPlane.dx -= heroPlane.speed;
+        heroPlane.frameX = 0;
     }
 
-    if (keystate[39]) {
-        plane.dx += plane.speed;
-        sprite.frameX = 3;
+    if (keystate['ArrowRight']) {
+        heroPlane.dx += heroPlane.speed;
+        heroPlane.frameX = 3;
     }
-
-    if (!keystate[37] && !keystate[39]) {
-        plane.dx = 0;
-        sprite.frameX = 1;
+    
+    if (!keystate['ArrowLeft'] && !keystate['ArrowRight']) {
+        heroPlane.dx = 0;
+        heroPlane.frameX = 1;
     }
 
     setTimeout(gameloop, 10);
 }
 
-function detectwalls() {
-    if (plane.x < 0)
-        plane.x = 0;
-    if (plane.x + spriteWidth > CANVAS_WIDTH)
-        plane.x = CANVAS_WIDTH - spriteWidth;
-}
+document.addEventListener("keydown", function(e){
+    keystate[e.key] = true;
+});
+document.addEventListener("keyup", function(e){
+    keystate[e.key] = false;
+});
+gameloop();
 
+
+function handleStart(){
+    document.getElementById("startScreen").style.display="none";
+    animate(0);
+}
 function handleGameOver(){
     document.getElementById("gameOverScreen").style.display="flex";
     Scorectx.clearRect(0,0,scoCanWidth,scoCanHeight);
     best=Math.max(score,best);
 }
-
-function newpos(e_arr) {
-    plane.x += plane.dx;
-    plane.y += plane.dy;
-    e_arr.forEach(e=>{
-        let ypos=(plane.y+spriteHeight/2)-(e.y+e.dh/2);
-        let xpos=(plane.x+spriteWidth/2)-(e.x+e.dw/2);
-        let dis=Math.sqrt(xpos*xpos + ypos*ypos);
-
-        if(dis<=(e.dw/2+spriteHeight/2+5)){
-            gameOver=true;
-            audio.play();
-            setTimeout(() => {
-                handleGameOver();
-            }, 700);
-        }
-    })
-    detectwalls();
-}
-
-window.addEventListener("keydown", kd);
-window.addEventListener("keyup", ku);
-
-gameloop();
-
-
-//Start the game
-document.addEventListener("keypress",handleStart,{once:true});
-
 function handleRestart(){
     document.getElementById("gameOverScreen").style.display="none";
     keystate = {};
@@ -218,13 +231,13 @@ function handleRestart(){
     enemymaker.enemies=[];
     y1 = 0;
     y2=-722;
-    gamespeed=5;
-    plane.x= CANVAS_WIDTH / 2 - spriteWidth / 2,
-    plane.y= CANVAS_HEIGHT - spriteHeight-10,
+    spaceBg.gamespeed=5;
+    heroPlane.destX= CANVAS_WIDTH / 2 - heroPlane.destWidth / 2,
+    heroPlane.destY= CANVAS_HEIGHT - heroPlane.destHeight-10,
     animate(0);
 }
 
-function handleStart(){
-    document.getElementById("startScreen").style.display="none";
-    animate(0);
-}
+document.addEventListener("keypress",handleStart,{once:true});
+
+
+
